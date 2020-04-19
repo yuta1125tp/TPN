@@ -67,7 +67,9 @@ def inference_recognizer(model, frames):
     data = dict(img_group_0=frames,
                 num_modalities=1,
                 img_meta={})
-    data = scatter(collate([data], samples_per_gpu=1), [device])[0]
+    data = collate([data], samples_per_gpu=1)
+    if device.type != 'cpu':
+        data = scatter(data, [device])[0]
     # forward the model
     with torch.no_grad():
         result = model(return_loss=False, rescale=True, **data)
@@ -126,6 +128,7 @@ parser.add_argument('--label_file', type=str, default='demo/category.txt')
 parser.add_argument('--video_file', type=str, default='demo/demo.mp4')
 parser.add_argument('--frame_folder', type=str, default=None)
 parser.add_argument('--rendered_output', type=str, default='demo/demo_pred.mp4')
+parser.add_argument('--device', type=str, default='cuda:0', help='you can set "cpu"')
 args = parser.parse_args()
 
 # Obtain video frames
@@ -141,7 +144,7 @@ else:
     print('Extracting frames using ffmpeg...')
     seg_frames, raw_frames, fps = extract_frames(args.video_file, 8)
 
-model = init_recognizer(args.config, checkpoint=args.checkpoint, label_file=args.label_file)
+model = init_recognizer(args.config, checkpoint=args.checkpoint, label_file=args.label_file, device=args.device,)
 results = inference_recognizer(model, seg_frames)
 prob = softmax(results.squeeze())
 idx = np.argsort(-prob)
