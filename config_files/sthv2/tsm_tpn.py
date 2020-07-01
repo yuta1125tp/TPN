@@ -1,5 +1,6 @@
 model = dict(
     type='TSN2D',
+    onnx_compatible=True,
     backbone=dict(
         type='ResNet',
         pretrained='modelzoo://resnet50',
@@ -52,7 +53,8 @@ model = dict(
         spatial_size=7),
     segmental_consensus=dict(
         type='SimpleConsensus',
-        consensus_type='avg'),
+        consensus_type='avg',
+        onnx_compatible=True),
     cls_head=dict(
         type='ClsHead',
         with_avg_pool=False,

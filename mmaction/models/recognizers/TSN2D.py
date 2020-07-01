@@ -20,7 +20,8 @@ class TSN2D(BaseRecognizer):
                  flip=False,
                  cls_head=None,
                  train_cfg=None,
-                 test_cfg=None):
+                 test_cfg=None,
+                 onnx_compatible=False):
 
         super(TSN2D, self).__init__()
         self.backbone = builder.build_backbone(backbone)
@@ -55,6 +56,8 @@ class TSN2D(BaseRecognizer):
         assert modality in ['RGB', 'Flow', 'RGBDiff']
 
         self.init_weights()
+
+        self.onnx_compatible = onnx_compatible
 
     @property
     def with_spatial_temporal_module(self):
@@ -155,8 +158,10 @@ class TSN2D(BaseRecognizer):
                 x = x.squeeze(1)
             if self.with_cls_head:
                 x = self.cls_head(x)
-
-            return x.cpu().numpy()
+            if self.onnx_compatible:
+                return x
+            else:
+                return x.cpu().numpy()
         else:
             # fcn testing
             assert num_modalities == 1
@@ -188,5 +193,9 @@ class TSN2D(BaseRecognizer):
                 x = x.reshape((-1, num_seg) + x.shape[1:]).transpose(1, 2)
             x = self.cls_head(x)
 
-            prob = torch.nn.functional.softmax(x.mean([2, 3, 4]), 1).mean(0, keepdim=True).detach().cpu().numpy()
-            return prob
+            prob = torch.nn.functional.softmax(x.mean([2, 3, 4]), 1).mean(0, keepdim=True).detach()
+
+            if self.onnx_compatible:
+                return prob
+            else:
+                return prob.cpu().numpy()

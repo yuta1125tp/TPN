@@ -35,15 +35,19 @@ class _SimpleConsensus(torch.autograd.Function):
 
 @SEGMENTAL_CONSENSUSES.register_module
 class SimpleConsensus(nn.Module):
-    def __init__(self, consensus_type, dim=1):
+    def __init__(self, consensus_type, dim=1, onnx_compatible=False):
         super(SimpleConsensus, self).__init__()
 
         assert consensus_type in ['avg']
         self.consensus_type = consensus_type
         self.dim = dim
+        self.onnx_compatible = onnx_compatible
 
     def init_weights(self):
         pass
 
     def forward(self, input):
-        return _SimpleConsensus(self.consensus_type, self.dim)(input)
+        if self.onnx_compatible:
+            return input.mean(dim=self.dim, keepdim=True)
+        else:
+            return _SimpleConsensus(self.consensus_type, self.dim)(input)

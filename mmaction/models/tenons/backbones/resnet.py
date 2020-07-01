@@ -94,10 +94,29 @@ class Bottleneck(nn.Module):
                 n_batch = nt // self.nsegments
                 x = x.view(n_batch, self.nsegments, c, h, w)
                 fold = c // 8
-                out = torch.zeros_like(x)
-                out[:, :-1, :fold] = x[:, 1:, :fold]
-                out[:, 1:, fold: 2 * fold] = x[:, :-1, fold: 2 * fold]
-                out[:, :, 2 * fold:] = x[:, :, 2 * fold:]
+
+                # copy [:fold] channels with +1 shift
+                fold_blk1 = torch.cat(
+                    [
+                        x[:, 1:, :fold],
+                        torch.zeros([n_batch, 1, fold, h, w])
+                    ], dim=1)
+                # copy [fold:2*fold] channels with -1 shift
+                fold_blk2 = torch.cat(
+                    [
+                        torch.zeros([n_batch, 1, fold, h, w]),
+                        x[:, :-1, fold:2*fold]
+                    ], dim=1)
+                # copy [2*fold:] channels without any shift
+                fold_blk3 = x[:, :, 2 * fold:]
+
+                out = torch.cat(
+                    [
+                        fold_blk1, # torch.Size([1, 8, 8, 64, 64])
+                        fold_blk2, # torch.Size([1, 8, 8, 64, 64])
+                        fold_blk3  # torch.Size([1, 8, 48, 64, 64])
+                    ], dim=2) # torch.Size([1, 8, 64, 64, 64])
+
                 x = out.view(nt, c, h, w)
 
             out = self.conv1(x)
