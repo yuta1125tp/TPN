@@ -120,43 +120,44 @@ def render_frames(frames, prediction):
     return rendered_frames
 
 
-# options
-parser = argparse.ArgumentParser(description="test TPN on a single video")
-parser.add_argument('config', type=str, default=None, help='model init config')
-parser.add_argument('checkpoint', type=str, default=None)
-parser.add_argument('--label_file', type=str, default='demo/category.txt')
-parser.add_argument('--video_file', type=str, default='demo/demo.mp4')
-parser.add_argument('--frame_folder', type=str, default=None)
-parser.add_argument('--rendered_output', type=str, default='demo/demo_pred.mp4')
-parser.add_argument('--device', type=str, default='cuda:0', help='you can set "cpu"')
-args = parser.parse_args()
+if __name__=="__main__":
+    # options
+    parser = argparse.ArgumentParser(description="test TPN on a single video")
+    parser.add_argument('config', type=str, default=None, help='model init config')
+    parser.add_argument('checkpoint', type=str, default=None)
+    parser.add_argument('--label_file', type=str, default='demo/category.txt')
+    parser.add_argument('--video_file', type=str, default='demo/demo.mp4')
+    parser.add_argument('--frame_folder', type=str, default=None)
+    parser.add_argument('--rendered_output', type=str, default='demo/demo_pred.mp4')
+    parser.add_argument('--device', type=str, default='cuda:0', help='you can set "cpu"')
+    args = parser.parse_args()
 
-# Obtain video frames
-if args.frame_folder is not None:
-    print('Loading frames in {}'.format(args.frame_folder))
-    import glob
+    # Obtain video frames
+    if args.frame_folder is not None:
+        print('Loading frames in {}'.format(args.frame_folder))
+        import glob
 
-    # Here, make sure after sorting the frame paths have the correct temporal order
-    frame_paths = sorted(glob.glob(os.path.join(args.frame_folder, '*.jpg')))
-    seg_frames, raw_frames = load_frames(frame_paths)
-    fps = 4
-else:
-    print('Extracting frames using ffmpeg...')
-    seg_frames, raw_frames, fps = extract_frames(args.video_file, 8)
+        # Here, make sure after sorting the frame paths have the correct temporal order
+        frame_paths = sorted(glob.glob(os.path.join(args.frame_folder, '*.jpg')))
+        seg_frames, raw_frames = load_frames(frame_paths)
+        fps = 4
+    else:
+        print('Extracting frames using ffmpeg...')
+        seg_frames, raw_frames, fps = extract_frames(args.video_file, 8)
 
-model = init_recognizer(args.config, checkpoint=args.checkpoint, label_file=args.label_file, device=args.device,)
-results = inference_recognizer(model, seg_frames)
-prob = softmax(results.squeeze())
-idx = np.argsort(-prob)
-# Output the prediction.
-video_name = args.frame_folder if args.frame_folder is not None else args.video_file
-print('RESULT ON ' + video_name)
-for i in range(0, 5):
-    print('{:.3f} -> {}'.format(prob[idx[i]], model.CLASSES[idx[i]]))
+    model = init_recognizer(args.config, checkpoint=args.checkpoint, label_file=args.label_file, device=args.device,)
+    results = inference_recognizer(model, seg_frames)
+    prob = softmax(results.squeeze())
+    idx = np.argsort(-prob)
+    # Output the prediction.
+    video_name = args.frame_folder if args.frame_folder is not None else args.video_file
+    print('RESULT ON ' + video_name)
+    for i in range(0, 5):
+        print('{:.3f} -> {}'.format(prob[idx[i]], model.CLASSES[idx[i]]))
 
-# Render output frames with prediction text.
-if args.rendered_output is not None:
-    prediction = model.CLASSES[idx[0]]
-    rendered_frames = render_frames(raw_frames, prediction)
-    clip = mpy.ImageSequenceClip(rendered_frames, fps=fps)
-    clip.write_videofile(args.rendered_output)
+    # Render output frames with prediction text.
+    if args.rendered_output is not None:
+        prediction = model.CLASSES[idx[0]]
+        rendered_frames = render_frames(raw_frames, prediction)
+        clip = mpy.ImageSequenceClip(rendered_frames, fps=fps)
+        clip.write_videofile(args.rendered_output)
