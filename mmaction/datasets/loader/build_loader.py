@@ -50,11 +50,14 @@ from torch.utils.data import DataLoader
 
 from .sampler import GroupSampler, DistributedGroupSampler, DistributedSampler
 
-# https://github.com/pytorch/pytorch/issues/973
-import resource
-
-rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
+try:
+    # https://github.com/pytorch/pytorch/issues/973
+    import resource
+    rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
+except ImportError:
+    # resource package is only available in unix.
+    pass
 
 
 def build_dataloader(dataset,

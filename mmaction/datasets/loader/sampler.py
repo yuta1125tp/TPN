@@ -4,7 +4,7 @@ import math
 import torch
 import numpy as np
 
-from torch.distributed import get_world_size, get_rank
+from mmcv.runner import get_dist_info
 from torch.utils.data import Sampler
 from torch.utils.data import DistributedSampler as _DistributedSampler
 
@@ -102,9 +102,9 @@ class DistributedGroupSampler(Sampler):
                  num_replicas=None,
                  rank=None):
         if num_replicas is None:
-            num_replicas = get_world_size()
+            _, num_replicas = get_dist_info()
         if rank is None:
-            rank = get_rank()
+            rank, _ = get_dist_info()
         self.dataset = dataset
         self.samples_per_gpu = samples_per_gpu
         self.num_replicas = num_replicas
